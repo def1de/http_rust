@@ -1,58 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Chat</title>
+        <link rel="stylesheet" href="/static/styles.css" />
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lorem Ipsum Modern Site</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-
-<body>
-    <header>
-        <h1>Lorem Ipsum</h1>
-        <p>A Modern Example Website</p>
-    </header>
-    <nav>
-        <a href="#about">About</a>
-        <a href="#features">Features</a>
-        <a href="#contact">Contact</a>
-    </nav>
-    <main>
-        <section id="about">
-            <h2>About Us</h2>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse euismod tellus nec ligula facilisis,
-                sit amet consectetur libero tempus.</p>
-        </section>
-        <section id="features">
-            <h2>Features</h2>
-            <div class="container">
-                <div class="card">
-                    <h3>Feature 1</h3>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-                </div>
-                <div class="card">
-                    <h3>Feature 2</h3>
-                    <p>Vestibulum at ante at nunc facilisis pulvinar.</p>
-                </div>
-                <div class="card">
-                    <h3>Feature 3</h3>
-                    <p>Integer quis elit eget libero cursus luctus.</p>
-                </div>
-            </div>
-        </section>
-        <section id="contact">
-            <h2>Contact Us</h2>
-            <p>For inquiries, email us at: <a href="mailto:info@example.com">info@example.com</a>.</p>
-        </section>
-        <section>
-            <img src="/static/image.png" alt="">
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2024 Lorem Ipsum. All rights reserved.</p>
-    </footer>
-</body>
-<script src="/static/scripts.js"></script>
-
+    <body>
+        <div class="container">
+            <div class="chat" id="chat"></div>
+            <input class="chat-input" id="chat-input" type="text" placeholder="Type a message..." />
+        </div>
+    </body>
+    <script src="/static/scripts.js"></script>
 </html>
