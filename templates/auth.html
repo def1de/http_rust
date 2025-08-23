@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
+        <link rel="stylesheet" href="/static/styles.css" />
+        <link rel="stylesheet" href="/static/auth.css" />
+        <title>Authenticate to Chat</title>
+    </head>
+    <body>
+        <div class="container">
+            <form action="/auth" method="post">
+                <input type="text" id="username" name="username" placeholder="Username" required />
+                <input type="password" id="password" name="password" placeholder="Password" required />
+                <input type="submit" id="submit" value="Login" />
+            </form>
+        </div>
+    </body>
+</html>
