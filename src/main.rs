@@ -2,6 +2,7 @@ mod websocket;
 mod handlers;
 mod database;
 mod auth;
+mod template;
 
 use axum::Router;
 use tower_http::services::ServeDir;

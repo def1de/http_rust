@@ -1,4 +1,4 @@
-use axum::http::{HeaderMap, HeaderValue};
+use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::extract::{State};
 use axum::Form;
@@ -7,14 +7,21 @@ use crate::AppState;
 use crate::auth::AuthenticatedUser;
 use sha2::{Sha256, Digest};
 use uuid::Uuid;
+use askama::Template;
 
 #[derive(serde::Serialize)]
 pub struct StatusResponse {
     connected_clients: usize,
 }
 
-pub async fn index(user: AuthenticatedUser) -> Html<&'static str> {
-    Html(std::include_str!("../templates/index.html"))
+pub async fn index(user: AuthenticatedUser) -> Response {
+    let template = crate::template::IndexTemplate {
+        username: &user.username,
+    };
+    match template.render() {
+        Ok(body) => Html(body).into_response(),
+        Err(_e) => Html("<h1>Template Error</h1>".to_string()).into_response(),
+    }
 }
 
 pub async fn status(State(state): State<AppState>) -> Json<StatusResponse> {

@@ -5,6 +5,14 @@ pub struct Database {
     connection: Arc<Mutex<sqlite::Connection>>,
 }
 
+impl Clone for Database {
+    fn clone(&self) -> Self {
+        Database {
+            connection: Arc::clone(&self.connection),
+        }
+    }
+}
+
 impl Database {
     pub fn new() -> Self {
         let conn = match sqlite::open("database.db") {
@@ -109,15 +117,19 @@ impl Database {
         Ok(())
     }
 
-    pub fn validate_session(&self, session_token: &str) -> Result<Option<i64>, sqlite::Error> {
+    pub fn validate_session(&self, session_token: &str) -> Result<Option<(i64, String)>, sqlite::Error> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT userID FROM Sessions WHERE session_token = ? AND expires_at > datetime('now');"
+            "SELECT s.userID, u.username
+                        FROM Sessions AS s
+                        JOIN Users AS u ON u.userID = s.userID
+                        WHERE session_token = ? AND expires_at > datetime('now');"
         )?;
         stmt.bind((1, session_token))?;
         if let sqlite::State::Row = stmt.next()? {
             let user_id: i64 = stmt.read(0)?;
-            Ok(Some(user_id))
+            let username: String = stmt.read(1)?;
+            Ok(Some((user_id, username)))
         } else {
             Ok(None)
         }
@@ -129,13 +141,5 @@ impl Database {
         stmt.bind((1, session_token))?;
         stmt.next()?;
         Ok(())
-    }
-}
-
-impl Clone for Database {
-    fn clone(&self) -> Self {
-        Database {
-            connection: Arc::clone(&self.connection),
-        }
     }
 }

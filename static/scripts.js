@@ -5,19 +5,11 @@ let username_field = document.getElementById("username");
 let user_count_field = document.getElementById("user-count");
 
 socket.onopen = function () {
-    let name = prompt("Enter your name:");
-    if (!name || name.trim() === "") {
-        name = "Anonymous";
-    }
-
-    username_field.innerText = name;
-    socket.send(name);
     updateUserCount();
 };
 
 socket.onclose = function () {
-    alert("Connection is closed...");
-    window.location.reload();
+    socket = new WebSocket("wss://chat.def1de.com/ws");
 };
 
 input.addEventListener("keydown", function (event) {

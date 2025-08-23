@@ -8,6 +8,7 @@ use crate::AppState;
 
 pub struct AuthenticatedUser {
     pub user_id: i64,
+    pub username: String,
 }
 
 #[async_trait]
@@ -26,14 +27,13 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
                     if cookie.starts_with("session_token=") {
                         let token = &cookie[14..]; // Remove "session_token="
                         
-                        if let Ok(Some(user_id)) = state.db_action().validate_session(token) {
-                            return Ok(AuthenticatedUser { user_id });
+                        if let Ok(Some(user_data)) = state.db_action().validate_session(token) {
+                            return Ok(AuthenticatedUser { user_id: user_data.0, username: user_data.1 });
                         }
                     }
                 }
             }
         }
-        
         Err(Redirect::to("/auth"))
     }
 }

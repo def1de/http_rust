@@ -5,15 +5,18 @@ use uuid::Uuid;
 use futures_util::{stream::StreamExt, sink::SinkExt};
 use tokio::sync::mpsc;
 use crate::AppState;
+use crate::auth::AuthenticatedUser;
 
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     axum::extract::State(state): axum::extract::State<AppState>,
+    user: AuthenticatedUser
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, state))
+    let username = user.username;
+    ws.on_upgrade(move |socket| handle_socket(socket, state, username))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState) {
+async fn handle_socket(socket: WebSocket, state: AppState, username: String) {
     let socket_id = Uuid::new_v4().to_string(); // Unique ID for each socket
     let (tx, mut rx) = mpsc::unbounded_channel();
     let (mut ws_sender, mut ws_receiver) = socket.split();
@@ -40,25 +43,9 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         sockets.remove(&socket_id_clone);
     });
 
-    let mut username = String::new();
-
     while let Some(Ok(msg)) = ws_receiver.next().await {
         match msg {
             Message::Text(text) => {
-                if username.is_empty() {
-                    // let mut usernames = state.usernames.lock().unwrap();
-                    // usernames.insert(socket_id.clone(), text.clone());
-                    username = text.clone();
-
-                    // Send a welcome message
-                    let welcome_message = format!("System: Welcome to the chat, {}!", text);
-                    let sockets = state.sockets.lock().unwrap();
-                    if let Some(sender) = sockets.get(&socket_id) {
-                        let _ = sender.send(Message::Text(welcome_message));
-                    }
-                    continue;
-                }
-
                 state.db_action().insert_message(&text, &username).unwrap();
 
                 let broadcast_message = format!("{}: {}", username, text);
