@@ -1,5 +1,6 @@
 use sqlite;
 use std::sync::{Arc, Mutex};
+use crate::template::MessageView;
 
 pub struct Database {
     connection: Arc<Mutex<sqlite::Connection>>,
@@ -141,5 +142,21 @@ impl Database {
         stmt.bind((1, session_token))?;
         stmt.next()?;
         Ok(())
+    }
+
+    pub fn get_messages(&self, limit: i64) -> Result<Vec<MessageView>, sqlite::Error> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT username, message_text FROM Messages ORDER BY timestamp DESC LIMIT ?;"
+        )?;
+        stmt.bind((1, limit))?;
+        
+        let mut messages = Vec::new();
+        while let sqlite::State::Row = stmt.next()? {
+            let username: String = stmt.read(0)?;
+            let message_text: String = stmt.read(1)?;
+            messages.push(MessageView { username, text: message_text });
+        }
+        Ok(messages)
     }
 }

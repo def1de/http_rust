@@ -6,6 +6,7 @@ use axum::{
 };
 use crate::AppState;
 
+#[allow(dead_code)]
 pub struct AuthenticatedUser {
     pub user_id: i64,
     pub username: String,

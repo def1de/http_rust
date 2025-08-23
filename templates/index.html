@@ -15,7 +15,19 @@
                 <p id="user-count">Current users: 0</p>
                 <p id="username">{{ username }}</p>
             </div>
-            <div class="chat" id="chat"></div>
+            <div class="chat" id="chat">
+                {% for message in messages %}
+                {% if message.username == username %}
+                    <div class="message right">
+                        <p class="username">You</p>
+                {% else %}
+                    <div class="message left">
+                        <p class="username">{{message.username}}</p>
+                {% endif %}
+                        <p class="message_content">{{message.text}}</p>
+                </div>
+                {% endfor %}
+            </div>
             <input class="chat-input" id="chat-input" type="text" placeholder="Type a message..." />
         </div>
         <div class="credits">

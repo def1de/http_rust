@@ -14,13 +14,16 @@ pub struct StatusResponse {
     connected_clients: usize,
 }
 
-pub async fn index(user: AuthenticatedUser) -> Response {
+pub async fn index(State(state): State<AppState>, user: AuthenticatedUser) -> Response {
+    let mut msgs = state.db_action().get_messages(50).unwrap_or_default();
+    msgs.reverse();
     let template = crate::template::IndexTemplate {
         username: &user.username,
+        messages: msgs,
     };
     match template.render() {
         Ok(body) => Html(body).into_response(),
-        Err(_e) => Html("<h1>Template Error</h1>".to_string()).into_response(),
+        Err(_e) => (StatusCode::INTERNAL_SERVER_ERROR, "Template render error").into_response(),
     }
 }
 

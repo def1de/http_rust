@@ -6,6 +6,7 @@ let user_count_field = document.getElementById("user-count");
 
 socket.onopen = function () {
     updateUserCount();
+    scrollToBottom();
 };
 
 socket.onclose = function () {
