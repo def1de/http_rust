@@ -4,13 +4,24 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Chat</title>
+        <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
         <link rel="stylesheet" href="/static/styles.css" />
     </head>
 
     <body>
         <div class="container">
+            <div class="status-bar">
+                <p id="user-count">Current users: 0</p>
+                <p id="username">Username</p>
+            </div>
             <div class="chat" id="chat"></div>
             <input class="chat-input" id="chat-input" type="text" placeholder="Type a message..." />
+        </div>
+        <div class="credits">
+            <a href="https://def1de.com">Website created by Illia Katerynych</a>
+            <a href="https://www.flaticon.com/free-icons/chat-app" title="chat app icons"
+                >Chat app icons created by Bahu Icons - Flaticon</a
+            >
         </div>
     </body>
     <script src="/static/scripts.js"></script>

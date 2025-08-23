@@ -1,7 +1,7 @@
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::WebSocketUpgrade;
 use axum::response::{Html, IntoResponse};
-use axum::Router;
+use axum::{Json, Router};
 use tower_http::services::ServeDir;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -12,7 +12,32 @@ use futures_util::{stream::StreamExt, sink::SinkExt};
 #[derive(Clone)]
 struct AppState {
     sockets: Arc<Mutex<HashMap<String, mpsc::UnboundedSender<Message>>>>,
-    usernames: Arc<Mutex<HashMap<String, String>>>,
+}
+
+#[derive(serde::Serialize)]
+struct StatusResponse {
+    connected_clients: usize,
+}
+
+#[tokio::main]
+async fn main() {
+    let state = AppState {
+        sockets: Arc::new(Mutex::new(HashMap::new())),
+    };
+
+    // Websockets
+    let app = Router::new()
+        .route("/", axum::routing::get(index))
+        .route("/ws", axum::routing::get(websocket_handler))
+        .route("/status", axum::routing::get(status))
+        .nest_service("/static", ServeDir::new("static"))
+        .with_state(state);
+    let listener = tokio::net::TcpListener::bind("192.168.1.233:1578").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+
+async fn index() -> Html<&'static str> {
+    Html(std::include_str!("../templates/index.html"))
 }
 
 async fn websocket_handler(
@@ -43,11 +68,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 break;
             }
         }
+        println!("Disconnecting a client with id: {}", socket_id_clone);
         // Remove the socket from a HashMap when the connection is closed
         let mut sockets = state_clone.sockets.lock().unwrap();
         sockets.remove(&socket_id_clone);
-        let mut usernames = state_clone.usernames.lock().unwrap();
-        usernames.remove(&socket_id_clone);
     });
 
     let mut username = String::new();
@@ -79,6 +103,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 }
             }
             Message::Close(_) => {
+                println!("Client {} disconnected", socket_id);
                 break;
             }
             _ => {}
@@ -90,23 +115,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     sockets.remove(&socket_id);
 }
 
-async fn index() -> Html<&'static str> {
-    Html(std::include_str!("../templates/index.html"))
-}
-
-#[tokio::main]
-async fn main() {
-    let state = AppState {
-        sockets: Arc::new(Mutex::new(HashMap::new())),
-        usernames: Arc::new(Mutex::new(HashMap::new())),
+async fn status(axum::extract::State(state): axum::extract::State<AppState>) -> Json<StatusResponse> {
+    let sockets = state.sockets.lock().unwrap();
+    let response = StatusResponse {
+        connected_clients: sockets.len(),
     };
-
-    // Websockets
-    let app = Router::new()
-        .route("/", axum::routing::get(index))
-        .route("/ws", axum::routing::get(websocket_handler))
-        .nest_service("/static", ServeDir::new("static"))
-        .with_state(state);
-    let listener = tokio::net::TcpListener::bind("192.168.1.233:1578").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    Json(response)
 }

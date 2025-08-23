@@ -1,6 +1,8 @@
 let input = document.getElementById("chat-input");
 let chatBox = document.getElementById("chat");
 let socket = new WebSocket("wss://chat.def1de.com/ws");
+let username_field = document.getElementById("username");
+let user_count_field = document.getElementById("user-count");
 
 socket.onopen = function () {
     let name = prompt("Enter your name:");
@@ -8,11 +10,14 @@ socket.onopen = function () {
         name = "Anonymous";
     }
 
+    username_field.innerText = name;
     socket.send(name);
+    updateUserCount();
 };
 
 socket.onclose = function () {
     alert("Connection is closed...");
+    window.location.reload();
 };
 
 input.addEventListener("keydown", function (event) {
@@ -56,3 +61,17 @@ function scrollToBottom() {
         behavior: "smooth",
     });
 }
+
+function updateUserCount() {
+    fetch("https://chat.def1de.com/status")
+        .then((response) => response.json())
+        .then((data) => {
+            user_count_field.innerText = "Current users: " + data.connected_clients;
+        })
+        .catch((error) => {
+            console.error("Error fetching status:", error);
+            user_count_field.innerText = "Current users: 0";
+        });
+}
+
+setInterval(updateUserCount, 10000);
