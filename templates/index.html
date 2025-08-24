@@ -3,39 +3,49 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Chat</title>
         <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
         <link rel="stylesheet" href="/static/styles.css" />
         <link rel="stylesheet" href="/static/index.css" />
+        <title>Chat - Main</title>
     </head>
-
     <body>
         <div class="container">
-            <div class="status-bar">
-                <p id="user-count">Current users: 0</p>
-                <p id="username">{{ username }}</p>
-            </div>
-            <div class="chat" id="chat">
-                {% for message in messages %}
-                {% if message.username == username %}
-                    <div class="message right">
-                        <p class="username">You</p>
-                {% else %}
-                    <div class="message left">
-                        <p class="username">{{message.username}}</p>
-                {% endif %}
-                        <p class="message_content">{{message.text}}</p>
+            <h1>Welcome, {{ username }}!</h1>
+            <p>Select a chat from the carousel below to start chatting.</p>
+            <div class="chat-selector">
+                <div class="carousel-track">
+                    <button class="chat-option" id="newChatBtn">
+                        <p>[+] New Chat</p>
+                    </button>
+                    {% for chat in chats %}
+                    <div class="chat-option">
+                        <a href="/chat/{{chat.id}}"><p>{{chat.name}}</p></a>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-            <input class="chat-input" id="chat-input" type="text" placeholder="Type a message..." />
-        </div>
-        <div class="credits">
-            <a href="https://def1de.com">Website created by Illia Katerynych</a>
-            <a href="https://www.flaticon.com/free-icons/chat-app" title="chat app icons"
-                >Chat app icons created by Bahu Icons - Flaticon</a
-            >
         </div>
     </body>
-    <script src="/static/scripts.js"></script>
+    <script>
+        document.getElementById("newChatBtn").onclick = function () {
+            let chatName = prompt("Enter a name for the new chat:");
+            if (chatName) {
+                // Send a POST request to create a new chat
+                fetch("/newchat", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ chat_name: chatName }),
+                }).then((response) => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert("Failed to create chat.");
+                    }
+                });
+            }
+        };
+    </script>
 </html>

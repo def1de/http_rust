@@ -11,13 +11,18 @@ use std::collections::HashMap;
 use tokio::sync::mpsc;
 use axum::extract::ws::Message;
 
-use websocket::{websocket_handler};
-use handlers::{index, status, auth_get, auth_post, logout};
+use websocket::{chatsocket_handler};
+use handlers::*;
 use database::Database;
+
+pub struct SocketData {
+    pub chat_id: i64,
+    pub socket: mpsc::UnboundedSender<Message>,
+}
 
 #[derive(Clone)]
 pub struct AppState {
-    sockets: Arc<Mutex<HashMap<String, mpsc::UnboundedSender<Message>>>>,
+    sockets: Arc<Mutex<HashMap<String, SocketData>>>,
     db: Database,
 }
 
@@ -50,7 +55,9 @@ async fn main() {
 
     let app = Router::new()
         .route("/", axum::routing::get(index))
-        .route("/ws", axum::routing::get(websocket_handler))
+        .route("/chat/:id", axum::routing::get(chat))
+        .route("/chatsocket/:id", axum::routing::get(chatsocket_handler))
+        .route("/newchat", axum::routing::post(newchat))
         .route("/status", axum::routing::get(status))
         .route("/auth", axum::routing::get(auth_get).post(auth_post))
         .route("/logout", axum::routing::post(logout))

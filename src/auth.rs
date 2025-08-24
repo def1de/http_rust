@@ -1,8 +1,8 @@
 use axum::{
     async_trait,
-    extract::{FromRequestParts},
-    http::{request::Parts},
-    response::{Redirect},
+    extract::FromRequestParts,
+    http::request::Parts,
+    response::{IntoResponse, Redirect, Response},
 };
 use crate::AppState;
 
@@ -14,27 +14,22 @@ pub struct AuthenticatedUser {
 
 #[async_trait]
 impl FromRequestParts<AppState> for AuthenticatedUser {
-    type Rejection = Redirect;
+    type Rejection = Response;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        state: &AppState,
-    ) -> Result<Self, Self::Rejection> {
-        // Extract session token from cookies
-        if let Some(cookie_header) = parts.headers.get("cookie") {
-            if let Ok(cookie_str) = cookie_header.to_str() {
-                for cookie in cookie_str.split(';') {
-                    let cookie = cookie.trim();
-                    if cookie.starts_with("session_token=") {
-                        let token = &cookie[14..]; // Remove "session_token="
-                        
-                        if let Ok(Some(user_data)) = state.db_action().validate_session(token) {
-                            return Ok(AuthenticatedUser { user_id: user_data.0, username: user_data.1 });
-                        }
-                    }
-                }
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+        // Extract session_token from Cookie header
+        let token = parts
+            .headers
+            .get("cookie")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|s| s.split(';').find(|c| c.trim_start().starts_with("session_token=")))
+            .map(|c| c.trim_start()[14..].to_string());
+
+        if let Some(token) = token {
+            if let Ok(Some((user_id, username))) = state.db_action().validate_session(&token) {
+                return Ok(AuthenticatedUser { user_id, username });
             }
         }
-        Err(Redirect::to("/auth"))
+        Err(Redirect::to("/auth").into_response())
     }
 }

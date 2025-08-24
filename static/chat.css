@@ -1,0 +1,134 @@
+.chat {
+    width: 800px;
+    height: 500px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.message {
+    min-width: 200px;
+    max-width: 60%;
+    padding: 10px;
+    margin: 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    color: white;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    word-wrap: break-word;
+    animation: fadeIn 0.5s;
+}
+
+.message.left {
+    align-self: flex-start;
+    background-color: rgba(0, 123, 255, 0.2);
+    margin-left: 10px;
+    margin-right: auto;
+}
+
+.message.right {
+    align-self: flex-end;
+    background-color: rgba(40, 167, 69, 0.2);
+    margin-left: auto;
+    margin-right: 10px;
+}
+
+.username {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.credits {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    font-size: 12px;
+    color: lightgrey;
+}
+
+.credits > a {
+    display: block;
+}
+
+.status-bar {
+    width: 800px;
+    color: lightgray;
+    display: flex;
+    padding: 5px 20px;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    background-color: rgba(0, 0, 0, 0.3);
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    border-radius: 10px;
+}
+
+.chat-selector {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+}
+
+/* Vertical carousel (parallax sideways) */
+.v-carousel {
+    /* Revert to left-side simple placement */
+    --gap: 50px; /* vertical distance between cards */
+    --side: 30px; /* sideways shift per step */
+    --dragX: 0px; /* set by JS during drag */
+    position: absolute;
+    top: 40%;
+    left: 10px;
+    transform: translateY(-50%);
+    display: block;
+    width: auto;
+    height: auto;
+    z-index: 20;
+}
+
+/* Remove nav button visuals (no buttons in markup anymore, keep rule harmless) */
+.v-carousel .nav {
+    display: none;
+}
+
+.v-carousel .carousel-track {
+    position: relative;
+    overflow: visible; /* allow cards to render naturally */
+}
+
+/* Return to the clear, dark translucent card style and keep carousel transforms */
+.v-carousel .chat-option {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-inline: 0;
+    width: 200px;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: lightgray;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    /* Always shift non-active items to the left using abs(offset) */
+    transform: translateY(calc(var(--offset) * var(--gap)))
+        translateX(calc(-1 * var(--abs) * var(--side) + var(--dragX))) scale(calc(1 - (var(--abs) * 0.06)));
+    opacity: calc(1 - (var(--abs) * 0.18));
+    z-index: calc(100 - var(--abs));
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease; /* faster */
+    user-select: none;
+    touch-action: none;
+    will-change: transform, opacity;
+}
+
+.v-carousel .chat-option.active {
+    scale: 1.1;
+}
+
+.v-carousel .chat-option p {
+    margin: 0;
+    font-weight: 600;
+}

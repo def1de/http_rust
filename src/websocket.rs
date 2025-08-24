@@ -1,22 +1,28 @@
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::WebSocketUpgrade;
+use axum::extract::{WebSocketUpgrade, Path};
 use axum::response::IntoResponse;
+use axum::http::StatusCode;
 use uuid::Uuid;
 use futures_util::{stream::StreamExt, sink::SinkExt};
 use tokio::sync::mpsc;
-use crate::AppState;
+use crate::{AppState, SocketData};
 use crate::auth::AuthenticatedUser;
 
-pub async fn websocket_handler(
+pub async fn chatsocket_handler(
     ws: WebSocketUpgrade,
     axum::extract::State(state): axum::extract::State<AppState>,
+    Path(chat_id): Path<i64>,
     user: AuthenticatedUser
 ) -> impl IntoResponse {
+    if state.db_action().check_chat_membership(user.user_id, chat_id).unwrap_or(false) == false {
+        return (StatusCode::FORBIDDEN, "You are not a member of this chat").into_response();
+    }
+
     let username = user.username;
-    ws.on_upgrade(move |socket| handle_socket(socket, state, username))
+    ws.on_upgrade(move |socket| handle_socket(socket, state, chat_id, username))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, username: String) {
+async fn handle_socket(socket: WebSocket, state: AppState, chat_id: i64, username: String) {
     let socket_id = Uuid::new_v4().to_string(); // Unique ID for each socket
     let (tx, mut rx) = mpsc::unbounded_channel();
     let (mut ws_sender, mut ws_receiver) = socket.split();
@@ -24,7 +30,11 @@ async fn handle_socket(socket: WebSocket, state: AppState, username: String) {
     // Store the socket in the shared state
     {
         let mut sockets = state.sockets.lock().unwrap();
-        sockets.insert(socket_id.clone(), tx);
+        let socket_data = SocketData {
+            chat_id,
+            socket: tx,
+        };
+        sockets.insert(socket_id.clone(), socket_data);
     }
     println!("New client connected with id: {}", socket_id);
 
@@ -46,13 +56,17 @@ async fn handle_socket(socket: WebSocket, state: AppState, username: String) {
     while let Some(Ok(msg)) = ws_receiver.next().await {
         match msg {
             Message::Text(text) => {
-                state.db_action().insert_message(&text, &username).unwrap();
+                state.db_action().insert_message(&text, &username, chat_id).unwrap();
 
                 let broadcast_message = format!("{}: {}", username, text);
 
                 let sockets = state.sockets.lock().unwrap();
-                for (id, sender) in sockets.iter() {
+                for (id, socket_data) in sockets.iter() {
                     if id != &socket_id {
+                        if socket_data.chat_id != chat_id {
+                            continue; // Skip if chat IDs do not match
+                        }
+                        let sender = &socket_data.socket;
                         let _ = sender.send(Message::Text(broadcast_message.clone()));
                     }
                 }

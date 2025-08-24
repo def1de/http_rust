@@ -20,6 +20,9 @@ impl Database {
             Ok(conn) => conn,
             Err(e) => panic!("Error opening database: {}", e),
         };
+
+        conn.execute("PRAGMA foreign_keys = ON;").ok();
+
         Database { 
             connection: Arc::new(Mutex::new(conn)),
         }
@@ -33,7 +36,9 @@ impl Database {
                 messageID INTEGER PRIMARY KEY,
                 message_text TEXT NOT NULL,
                 username TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                chatID INTEGER NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(chatID) REFERENCES Chats(chatID) ON DELETE CASCADE
             );
             CREATE TABLE IF NOT EXISTS Users (
                 userID INTEGER PRIMARY KEY,
@@ -47,17 +52,29 @@ impl Database {
                 expires_at DATETIME NOT NULL,
                 FOREIGN KEY(userID) REFERENCES Users(userID)
             );
+            CREATE TABLE IF NOT EXISTS Chats (
+                chatID INTEGER PRIMARY KEY,
+                chat_name TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS ChatMembers (
+                chatID INTEGER NOT NULL,
+                userID INTEGER NOT NULL,
+                PRIMARY KEY (chatID, userID),
+                FOREIGN KEY(chatID) REFERENCES Chats(chatID) ON DELETE CASCADE,
+                FOREIGN KEY(userID) REFERENCES Users(userID) ON DELETE CASCADE
+            ) WITHOUT ROWID;
             ",
         )
     }
 
-    pub fn insert_message(&self, message_text: &str, username: &str) -> Result<(), sqlite::Error> {
+    pub fn insert_message(&self, message_text: &str, username: &str, chat_id: i64) -> Result<(), sqlite::Error> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "INSERT INTO Messages (message_text, username) VALUES (?, ?);"
+            "INSERT INTO Messages (message_text, username, chatID) VALUES (?, ?, ?);"
         )?;
         stmt.bind((1, message_text))?;
         stmt.bind((2, username))?;
+        stmt.bind((3, chat_id))?;
         stmt.next()?;
         Ok(())
     }
@@ -144,12 +161,17 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_messages(&self, limit: i64) -> Result<Vec<MessageView>, sqlite::Error> {
+    pub fn get_messages(&self, chat_id:i64, limit: i64) -> Result<Vec<MessageView>, sqlite::Error> {
         let conn = self.connection.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT username, message_text FROM Messages ORDER BY timestamp DESC LIMIT ?;"
+            "SELECT m.username, m.message_text
+                        FROM Messages AS m
+                        JOIN Chats AS c ON c.chatID = m.chatID
+                        WHERE c.chatID = ?
+                        ORDER BY timestamp DESC LIMIT ?;"
         )?;
-        stmt.bind((1, limit))?;
+        stmt.bind((1, chat_id))?;
+        stmt.bind((2, limit))?;
         
         let mut messages = Vec::new();
         while let sqlite::State::Row = stmt.next()? {
@@ -158,5 +180,58 @@ impl Database {
             messages.push(MessageView { username, text: message_text });
         }
         Ok(messages)
+    }
+
+    pub fn check_chat_membership(&self, user_id: i64, chat_id: i64) -> Result<bool, sqlite::Error> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT 1 FROM ChatMembers WHERE userID = ? AND chatID = ?;"
+        )?;
+        stmt.bind((1, user_id))?;
+        stmt.bind((2, chat_id))?;
+        if let sqlite::State::Row = stmt.next()? {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub fn get_user_chats(&self, user_id: i64) -> Result<Vec<(i64, String)>, sqlite::Error> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT c.chatID, c.chat_name
+                        FROM Chats AS c
+                        JOIN ChatMembers AS cm ON cm.chatID = c.chatID
+                        WHERE cm.userID = ?;"
+        )?;
+        stmt.bind((1, user_id))?;
+
+        let mut chats = Vec::new();
+        while let sqlite::State::Row = stmt.next()? {
+            let chat_id: i64 = stmt.read(0)?;
+            let chat_name: String = stmt.read(1)?;
+            chats.push((chat_id, chat_name));
+        }
+        Ok(chats)
+    }
+
+    pub fn create_chat(&self, chat_name: &str, user_id: i64) -> Result<i64, sqlite::Error> {
+        let conn = self.connection.lock().unwrap();
+
+        let chat_id: i64 = {
+            let mut stmt = conn.prepare("INSERT INTO Chats (chat_name) VALUES (?) RETURNING chatID;")?;
+            stmt.bind((1, chat_name))?;
+            match stmt.next()? { sqlite::State::Row => stmt.read(0)?, _ => unreachable!() }
+        };
+
+        {
+            let mut stmt = conn.prepare(
+                "INSERT INTO ChatMembers (chatID, userID) VALUES (?, ?);"
+            )?;
+            stmt.bind((1, chat_id))?;
+            stmt.bind((2, user_id))?;
+            stmt.next()?;
+        }
+        Ok(chat_id)
     }
 }

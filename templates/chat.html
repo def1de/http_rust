@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Chat</title>
+        <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
+        <link rel="stylesheet" href="/static/styles.css" />
+        <link rel="stylesheet" href="/static/chat.css" />
+    </head>
+
+    <body>
+        <div class="container">
+            <div class="status-bar">
+                <p id="user-count">Current users: 0</p>
+                <p id="username">{{ username }}</p>
+            </div>
+            <div class="chat" id="chat">
+                {% for message in messages %} {% if message.username == username %}
+                <div class="message right">
+                    <p class="username">You</p>
+                    <p class="message_content">{{message.text}}</p>
+                </div>
+                {% else %}
+                <div class="message left">
+                    <p class="username">{{message.username}}</p>
+                    <p class="message_content">{{message.text}}</p>
+                </div>
+                {% endif %} {% endfor %}
+            </div>
+            <input class="chat-input" id="chat-input" type="text" placeholder="Type a message..." />
+        </div>
+        <div class="chat-selector v-carousel" id="chatCarousel" aria-label="Chat selector">
+            <div class="carousel-track">
+                {% for chat in chats %}
+                <a href="/chat/{{chat.id}}">
+                    <div class="chat-option" data-index="{{ loop.index0 }}">
+                        <p>{{chat.name}}</p>
+                    </div>
+                </a>
+
+                {% endfor %}
+            </div>
+        </div>
+        <div class="credits">
+            <a href="https://def1de.com">Website created by Illia Katerynych</a>
+            <a href="https://www.flaticon.com/free-icons/chat-app" title="chat app icons"
+                >Chat app icons created by Bahu Icons - Flaticon</a
+            >
+        </div>
+    </body>
+    <script src="/static/scripts.js"></script>
+</html>

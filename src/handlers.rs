@@ -1,8 +1,7 @@
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
-use axum::extract::{State};
+use axum::extract::{State, Path, Json};
 use axum::Form;
-use axum::Json;
 use crate::AppState;
 use crate::auth::AuthenticatedUser;
 use sha2::{Sha256, Digest};
@@ -15,11 +14,46 @@ pub struct StatusResponse {
 }
 
 pub async fn index(State(state): State<AppState>, user: AuthenticatedUser) -> Response {
-    let mut msgs = state.db_action().get_messages(50).unwrap_or_default();
-    msgs.reverse();
+    let chats = state.db_action().get_user_chats(user.user_id).unwrap_or_default();
     let template = crate::template::IndexTemplate {
         username: &user.username,
+        chats: chats.into_iter().map(|(id, name)| crate::template::ChatView { id, name }).collect(),
+    };
+    match template.render() {
+        Ok(body) => Html(body).into_response(),
+        Err(_e) => (StatusCode::INTERNAL_SERVER_ERROR, "Template render error").into_response(),
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct NewChatPayload {
+    pub chat_name: String,
+}
+
+pub async fn newchat(State(state): State<AppState>, user: AuthenticatedUser, Json(payload): Json<NewChatPayload>) -> Response {
+    println!("Creating new chat: {} for user: {}", payload.chat_name, user.username);
+    match state.db_action().create_chat(&payload.chat_name, user.user_id) {
+        Ok(id) => println!("Created new chat with id: {}", id),
+        Err(e) => {
+            eprintln!("Error creating chat: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create chat").into_response();
+        },
+    };
+    StatusCode::CREATED.into_response()
+}
+
+pub async fn chat(State(state): State<AppState>, Path(chat_id): Path<i64>, user: AuthenticatedUser) -> Response {
+    if state.db_action().check_chat_membership(user.user_id, chat_id).unwrap_or(false) == false {
+        return (StatusCode::FORBIDDEN, "You are not a member of this chat").into_response();
+    }
+
+    let mut msgs = state.db_action().get_messages(chat_id, 50).unwrap_or_default();
+    let chats = state.db_action().get_user_chats(user.user_id).unwrap();
+    msgs.reverse();
+    let template = crate::template::ChatTemplate {
+        username: &user.username,
         messages: msgs,
+        chats: chats.into_iter().map(|(id, name)| crate::template::ChatView { id, name }).collect(),
     };
     match template.render() {
         Ok(body) => Html(body).into_response(),
