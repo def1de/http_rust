@@ -21,6 +21,14 @@
     border-bottom-right-radius: 10px;
 }
 
+p {
+    width: 300px;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #555;
+}
+
 input:hover,
 input:focus {
     width: 320px !important;

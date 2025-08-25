@@ -65,6 +65,6 @@ async fn main() {
         .route("/logout", axum::routing::post(logout))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state);
-    let listener = tokio::net::TcpListener::bind("192.168.1.233:1578").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:1578").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

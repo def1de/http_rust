@@ -136,6 +136,10 @@ pub async fn auth_post(
                 // User exists, check password
                 if state.db_action().check_password(username, &hash) {
                     return start_session(&state, &username)
+                } else {
+                    return Html("<p>Invalid password, perhaps user already exists, under a different password?
+                    <a href=\"/auth\">Try again</a>
+                    </p>".to_string()).into_response()
                 }
             }
             Ok(None) => {
@@ -144,6 +148,10 @@ pub async fn auth_post(
                 // Repeat the check to authorize the new user
                 if state.db_action().check_password(username, &hash) {
                     return start_session(&state, &username)
+                } else {
+                    return Html("<p>Invalid password, perhaps user already exists, under a different password?
+                    <a href=\"/auth\">Try again</a>
+                    </p>".to_string()).into_response()
                 }
             }
             Err(e) => {
@@ -151,7 +159,6 @@ pub async fn auth_post(
             }
         }
     }
-    Html("<p>Authentication logic not implemented yet.</p>".to_string()).into_response()
 }
 
 fn generate_session_token() -> String {
