@@ -1,4 +1,4 @@
-# http (Rust/Axum chat app)
+# Chat App
 
 A lightweight real‑time chat application built with Rust, Axum, WebSockets, Askama templates, and SQLite. Supports user authentication with sessions, multi‑chat rooms with membership, invite links, message persistence, and a simple responsive UI.
 
