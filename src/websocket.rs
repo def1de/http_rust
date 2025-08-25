@@ -56,7 +56,13 @@ async fn handle_socket(socket: WebSocket, state: AppState, chat_id: i64, usernam
     while let Some(Ok(msg)) = ws_receiver.next().await {
         match msg {
             Message::Text(text) => {
-                state.db_action().insert_message(&text, &username, chat_id).unwrap();
+                match state.db_action().insert_message(&text, &username, chat_id) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        eprintln!("Failed to inserte a message: {}", e);
+                        continue
+                    }
+                };
 
                 let broadcast_message = format!("{}: {}", username, text);
 
