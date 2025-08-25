@@ -65,6 +65,15 @@ pub async fn chat(State(state): State<AppState>, Path(chat_id): Path<i64>, user:
 pub async fn invite(State(state): State<AppState>, Path(code): Path<String>, user: AuthenticatedUser) -> Response {
     match state.db_action().get_chat_id_by_invite_code(&code) {
         Ok(Some(chat_id)) => {
+            // Check if user is already a member
+            match state.db_action().check_chat_membership(user.user_id, chat_id) {
+                Ok(true) => return Redirect::to(&format!("/chat/{}", chat_id)).into_response(),
+                Ok(false) => (),
+                Err(e) => {
+                    eprintln!("Error checking chat membership: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to process invite").into_response();
+                }
+            }
             // Add user to chat
             match state.db_action().add_user_to_chat(user.user_id, chat_id) {
                 Ok(_) => Redirect::to(&format!("/chat/{}", chat_id)).into_response(),
