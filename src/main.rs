@@ -58,6 +58,8 @@ async fn main() {
         .route("/chat/:id", axum::routing::get(chat))
         .route("/chatsocket/:id", axum::routing::get(chatsocket_handler))
         .route("/newchat", axum::routing::post(newchat))
+        .route("/invite/:code", axum::routing::get(invite))
+        .route("/create_invite/:chat_id", axum::routing::post(create_invite))
         .route("/status", axum::routing::get(status))
         .route("/auth", axum::routing::get(auth_get).post(auth_post))
         .route("/logout", axum::routing::post(logout))

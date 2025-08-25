@@ -7,6 +7,7 @@ use crate::auth::AuthenticatedUser;
 use sha2::{Sha256, Digest};
 use uuid::Uuid;
 use askama::Template;
+use serde_json::json;
 
 #[derive(serde::Serialize)]
 pub struct StatusResponse {
@@ -58,6 +59,46 @@ pub async fn chat(State(state): State<AppState>, Path(chat_id): Path<i64>, user:
     match template.render() {
         Ok(body) => Html(body).into_response(),
         Err(_e) => (StatusCode::INTERNAL_SERVER_ERROR, "Template render error").into_response(),
+    }
+}
+
+pub async fn invite(State(state): State<AppState>, Path(code): Path<String>, user: AuthenticatedUser) -> Response {
+    match state.db_action().get_chat_id_by_invite_code(&code) {
+        Ok(Some(chat_id)) => {
+            // Add user to chat
+            match state.db_action().add_user_to_chat(user.user_id, chat_id) {
+                Ok(_) => Redirect::to(&format!("/chat/{}", chat_id)).into_response(),
+                Err(e) => {
+                    eprintln!("Error adding user to chat: {}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, "Failed to join chat").into_response()
+                }
+            }
+        },
+        Ok(None) => (StatusCode::NOT_FOUND, "Invalid invite code").into_response(),
+        Err(e) => {
+            eprintln!("Error retrieving chat by invite code: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to process invite").into_response()
+        }
+    }
+}
+
+pub async fn create_invite(State(state): State<AppState>, Path(chat_id): Path<i64>, user: AuthenticatedUser) -> Response {
+    // Check if user is a member of the chat
+    if state.db_action().check_chat_membership(user.user_id, chat_id).unwrap_or(false) == false {
+        return (StatusCode::FORBIDDEN, "You are not a member of this chat").into_response();
+    }
+
+    // Generate invite code
+    let invite_code = Uuid::new_v4().to_string();
+
+    match state.db_action().create_invite_code(chat_id, &invite_code) {
+        Ok(_) => {
+            (StatusCode::CREATED, Json(json!({ "code": invite_code }))).into_response()
+        },
+        Err(e) => {
+            eprintln!("Error creating invite code: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create invite").into_response()
+        }
     }
 }
 

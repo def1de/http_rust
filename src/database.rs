@@ -63,6 +63,12 @@ impl Database {
                 FOREIGN KEY(chatID) REFERENCES Chats(chatID) ON DELETE CASCADE,
                 FOREIGN KEY(userID) REFERENCES Users(userID) ON DELETE CASCADE
             ) WITHOUT ROWID;
+            CREATE TABLE IF NOT EXISTS InviteCodes (
+                code TEXT PRIMARY KEY,
+                chatID INTEGER NOT NULL,
+                expires_at DATETIME NOT NULL,
+                FOREIGN KEY(chatID) REFERENCES Chats(chatID) ON DELETE CASCADE
+            );
             ",
         )
     }
@@ -233,5 +239,41 @@ impl Database {
             stmt.next()?;
         }
         Ok(chat_id)
+    }
+
+    pub fn add_user_to_chat(&self, user_id: i64, chat_id: i64) -> Result<(), sqlite::Error> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "INSERT INTO ChatMembers (chatID, userID) VALUES (?, ?);"
+        )?;
+        stmt.bind((1, chat_id))?;
+        stmt.bind((2, user_id))?;
+        stmt.next()?;
+        Ok(())
+    }
+
+    pub fn get_chat_id_by_invite_code(&self, code: &str) -> Result<Option<i64>, sqlite::Error> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT chatID FROM InviteCodes WHERE code = ? AND expires_at > datetime('now');"
+        )?;
+        stmt.bind((1, code))?;
+        if let sqlite::State::Row = stmt.next()? {
+            let chat_id: i64 = stmt.read(0)?;
+            Ok(Some(chat_id))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn create_invite_code(&self, chat_id: i64, code: &str) -> Result<(), sqlite::Error> {
+        let conn = self.connection.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "INSERT INTO InviteCodes (code, chatID, expires_at) VALUES (?, ?, datetime('now', '+7 days'));"
+        )?;
+        stmt.bind((1, code))?;
+        stmt.bind((2, chat_id))?;
+        stmt.next()?;
+        Ok(())
     }
 }

@@ -40,6 +40,34 @@ window.onload = function () {
     };
 };
 
+document.getElementById("inviteBtn").onclick = function () {
+    let chatId = getChatIdFromPath();
+    if (!chatId) {
+        return;
+    }
+    fetch(`/create_invite/${chatId}`, { method: "POST" })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.code) {
+                const inviteLink = `${window.location.origin}/invite/${data.code}`;
+                navigator.clipboard.writeText(inviteLink).then(
+                    () => {
+                        alert("Invite link copied to clipboard:\n" + inviteLink);
+                    },
+                    (err) => {
+                        alert("Failed to copy invite link: " + err);
+                    }
+                );
+            } else {
+                alert("Failed to create invite link.");
+            }
+        })
+        .catch((error) => {
+            console.error("Error creating invite link:", error);
+            alert("Error creating invite link.");
+        });
+};
+
 input.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
         event.preventDefault();
@@ -87,7 +115,20 @@ setInterval(updateUserCount, 10000);
     if (!root) return;
 
     const items = Array.from(root.querySelectorAll(".chat-option"));
+
+    // Use current chat id from URL to pick the active item
     let active = 0;
+    const currentId = getChatIdFromPath();
+    if (currentId !== null) {
+        const idx = items.findIndex((el) => {
+            const a = el.closest("a");
+            if (!a) return false;
+            const m = a.getAttribute("href")?.match(/^\/chat\/(\d+)\/?$/);
+            return m ? parseInt(m[1], 10) === currentId : false;
+        });
+        if (idx !== -1) active = idx;
+    }
+
     const last = items.length - 1;
 
     function apply() {
@@ -111,14 +152,6 @@ setInterval(updateUserCount, 10000);
     // init positions
     apply();
 
-    // click to focus
-    items.forEach((el, i) =>
-        el.addEventListener("click", () => {
-            active = i;
-            apply();
-        })
-    );
-
     // mouse wheel (snappier, accumulated)
     let wheelAccum = 0;
     let lastStep = 0;
@@ -141,28 +174,4 @@ setInterval(updateUserCount, 10000);
         },
         { passive: false }
     );
-
-    // keyboard
-    window.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowUp") {
-            e.preventDefault();
-            go(-1);
-        } else if (e.key === "ArrowDown") {
-            e.preventDefault();
-            go(1);
-        }
-    });
-
-    // Touch fallback
-    root.addEventListener(
-        "touchstart",
-        (e) => {
-            dragging = true;
-            startY = e.touches[0].clientY;
-            startX = e.touches[0].clientX;
-        },
-        { passive: true }
-    );
-    root.addEventListener("touchmove", onMove, { passive: true });
-    root.addEventListener("touchend", onUp);
 })();

@@ -132,3 +132,20 @@
     margin: 0;
     font-weight: 600;
 }
+
+.invite-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+
+#inviteBtn {
+    padding: 10px 20px;
+    background-color: rgba(0, 123, 255, 0.2);
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    transition: background-color 0.3s;
+}
